@@ -54,7 +54,7 @@ class SetLimitModal(ui.Modal, title=get_message("modals.set_limit.title")):
         self.add_item(self.limit_input)
 
     async def on_submit(self, interaction: Interaction):
-        if interaction.user.id != self.owner.id:
+        if self.owner is not None and interaction.user.id != self.owner.id:
             await interaction.response.send_message(
                 get_message("modals.set_limit.msg_error_owner"), ephemeral=True
             )

@@ -1,0 +1,52 @@
+#
+embeds:
+  private_voice:
+    title: "Your Private Voice Channel"
+    description: "Welcome {mention}!\n\nUse the buttons below to manage your channel."
+    color: orange
+    fields:
+      - name: "📝"
+        value: "Change your channel name."
+      - name: "👥 *"
+        value: "Set or adjust the member limit."
+      - name: "👥 +"
+        value: "Increase member limit by 1."
+      - name: "👥 -"
+        value: "Decrease member limit by 1."
+    footer: "Owner: {display_name}"
+
+  top:
+    title: "Top {limit} Longest Voice Sessions"
+    no_sessions: "No sessions found yet."
+    color: red
+    medals: ["🥇", "🥈", "🥉"]
+
+modals:
+  rename:
+    title: "Rename Your Voice Channel"
+    name_label: "New channel name"
+    name_placeholder: "Enter a name (1–100 chars)"
+    msg_error_owner: "Only the channel owner can rename this VC!"
+    msg_error_empty: "Channel name cannot be empty."
+    msg_success: "Channel renamed to **{new_name}**!"
+  set_limit:
+    title: "Set Voice Channel Limit"
+    limit_label: "Enter limit"
+    limit_placeholder: "Must be a number 1–99 (0 for unlimited)"
+    msg_error_owner: "Only the channel owner can change the limit!"
+    msg_error_invalid: "Invalid number. Must be 0 or a positive integer."
+    msg_success: "Channel limit set to {new_limit}."
+
+buttons:
+  rename:
+    label: "📝"
+  increase_limit:
+    label: "👥+"
+    msg_success: "Channel limit increased to {new_limit}."
+    msg_error: "Only the channel owner can change the limit!"
+  decrease_limit:
+    label: "👥-"
+    msg_success: "Channel limit decreased to {new_limit}."
+    msg_error: "Only the channel owner can change the limit!"
+  set_limit:
+    label: "👥*"

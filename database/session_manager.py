@@ -52,6 +52,13 @@ class SessionManager:
         )
         return result.modified_count > 0
         
+    async def get_active_sessions(self) -> list[dict]:
+        cursor = self.collection.find({"is_ended": False})
+        return [
+            {"session": Session(**s), "created_by": s.get("created_by", "")}
+            async for s in cursor
+        ]
+
     async def update_channel_name(self, channel_id: int, new_name: str) -> bool:
         result = await self.collection.update_one(
             {"channel_id": channel_id, "is_ended": False},

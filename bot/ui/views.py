@@ -13,11 +13,11 @@ class ChannelControlView(ui.View):
         self.owner = owner
         self.session_manager = session_manager
 
-    @ui.button(label=get_message("buttons.rename.label"), style=discord.ButtonStyle.primary)
+    @ui.button(label=get_message("buttons.rename.label"), style=discord.ButtonStyle.primary, custom_id="rename_channel")
     async def rename_button(self, interaction: Interaction, button: ui.Button):
         await interaction.response.send_modal(RenameModal(self.channel, self.owner, self.session_manager))
 
-    @ui.button(label=get_message("buttons.increase_limit.label"), style=discord.ButtonStyle.success)
+    @ui.button(label=get_message("buttons.increase_limit.label"), style=discord.ButtonStyle.success, custom_id="increase_channel_limit")
     async def increase_limit(self, interaction: Interaction, button: ui.Button):
         if interaction.user.id != self.owner.id:
             await interaction.response.send_message(
@@ -32,7 +32,7 @@ class ChannelControlView(ui.View):
             ephemeral=True
         )
 
-    @ui.button(label=get_message("buttons.decrease_limit.label"), style=discord.ButtonStyle.danger)
+    @ui.button(label=get_message("buttons.decrease_limit.label"), style=discord.ButtonStyle.danger, custom_id="decrease_channel_limit")
     async def decrease_limit(self, interaction: Interaction, button: ui.Button):
         if interaction.user.id != self.owner.id:
             await interaction.response.send_message(
@@ -47,7 +47,7 @@ class ChannelControlView(ui.View):
             ephemeral=True
         )
 
-    @ui.button(label=get_message("buttons.set_limit.label"), style=discord.ButtonStyle.secondary)
+    @ui.button(label=get_message("buttons.set_limit.label"), style=discord.ButtonStyle.secondary, custom_id="set_channel_limit")
     async def set_limit_modal(self, interaction: Interaction, button: ui.Button):
         await interaction.response.send_modal(SetLimitModal(self.channel, self.owner))
 

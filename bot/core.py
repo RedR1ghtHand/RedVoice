@@ -26,8 +26,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 session_manager = SessionManager(db)
 
-temporary_channels = set()
-channel_owners = {}
+temporary_channels: set[int] = set()
 
 ALLOWED_GUILDS = settings.ALLOWED_GUILDS
 
@@ -45,6 +44,7 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_ready():
+    global temporary_channels
     logging.info(f"Bot is ready! Logged in as {bot.user}")
     logging.info(f"Currently registered commands: {len(tree.get_commands())}")
     try:
@@ -52,7 +52,31 @@ async def on_ready():
         logging.info(f"Synced {len(synced)} slash command(s) with Discord globally. Command tree: {tree.get_commands()}")
     except Exception as e:
         logging.error(f"Failed to sync slash commands globally: {e}")
-    
+
+    # Guild-specific sync so new commands show up immediately (global sync can take up to 1 hour)
+    for guild in bot.guilds:
+        if guild.id in ALLOWED_GUILDS:
+            try:
+                await tree.sync(guild=guild)
+                logging.info(f"Synced command tree to guild {guild.name} ({guild.id})")
+            except Exception as e:
+                logging.error(f"Failed to sync to guild {guild.name}: {e}")
+
+    active_sessions = await session_manager.get_active_sessions()
+    temporary_channels.clear()
+    temporary_channels.update(item["session"].channel_id for item in active_sessions)
+    for item in active_sessions:
+        session = item["session"]
+        created_by = item["created_by"]
+        channel = bot.get_channel(session.channel_id)
+        if channel is not None:
+            owner = None
+            if channel.guild and created_by:
+                owner = channel.guild.get_member_named(created_by)
+            bot.add_view(ChannelControlView(channel, owner=owner, session_manager=session_manager))
+    if active_sessions:
+        logging.info(f"Restored {len(active_sessions)} active session(s) into temporary_channels and re-added ChannelControlViews")
+
     for guild in bot.guilds:
         if guild.id not in ALLOWED_GUILDS:
             logging.info(f"Found unauthorized guild: {guild.name} (ID: {guild.id})")
@@ -75,7 +99,6 @@ async def on_voice_state_update(member, before, after):
             reason="Auto-created private channel"
         )
         temporary_channels.add(new_channel.id)
-        channel_owners[new_channel.id] = member.id
 
         await session_manager.start_session(
             created_by=str(member.name),
@@ -124,7 +147,7 @@ async def on_voice_state_update(member, before, after):
                 logging.info(F"Session '{before.channel.name}' ended. Entry saved to the database")
                 await before.channel.delete(reason="Temporary VC empty")
                 temporary_channels.remove(before.channel.id)
-                channel_owners.pop(before.channel.id, None)
+
 
 
 @tree.command(name="top", description="Show top sessions sorted by duration")
@@ -182,6 +205,55 @@ async def clean_up_short_sessions(interaction: discord.Interaction, treshhold: i
         await interaction.response.send_message(f"No sessions shorter than **{treshhold}**seconds found")
     else:
         await interaction.response.send_message(f"Cleaned up **{deleted_count}** sessions shorter than **{treshhold}**seconds")
+
+
+@tree.command(name="clean-up-active-sessions", description="Close empty temporary voice channels and save their sessions")
+@app_commands.checks.has_permissions(administrator=True)
+async def clean_up_active_sessions(interaction: discord.Interaction):
+    global temporary_channels
+    guild = interaction.guild
+    if not guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
+
+    empty_temporary = [
+        ch for ch in guild.voice_channels
+        if ch.id in temporary_channels and len(ch.members) == 0
+    ]
+    closed = 0
+    for ch in empty_temporary:
+        await session_manager.update_and_end_session(ch.id)
+        logging.info(f"Session '{ch.name}' ended via clean-up. Entry saved to the database")
+        await ch.delete(reason="Clean-up: temporary VC empty")
+        temporary_channels.discard(ch.id)
+        closed += 1
+
+    if closed == 0:
+        await interaction.response.send_message("No empty temporary voice channels to close.")
+    else:
+        await interaction.response.send_message(f"Closed **{closed}** empty temporary channel(s) and saved their sessions.")
+
+
+@tree.command(name="clean-up-db-sessions", description="End DB sessions that still have is_ended=False but their voice channel no longer exists")
+@app_commands.checks.has_permissions(administrator=True)
+async def clean_up_db_sessions(interaction: discord.Interaction):
+    global temporary_channels
+    active = await session_manager.get_active_sessions()
+    broken = [
+        item["session"] for item in active
+        if bot.get_channel(item["session"].channel_id) is None
+    ]
+    cleaned = 0
+    for session in broken:
+        await session_manager.update_and_end_session(session.channel_id)
+        temporary_channels.discard(session.channel_id)
+        logging.info(f"Broken session '{session.channel_name}' (channel_id={session.channel_id}) marked ended.")
+        cleaned += 1
+
+    if cleaned == 0:
+        await interaction.response.send_message("No broken sessions found.")
+    else:
+        await interaction.response.send_message(f"Cleaned up **{cleaned}** broken session(s) (channel no longer exists, entry saved and marked ended).")
 
 
 def run_bot():

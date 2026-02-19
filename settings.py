@@ -1,3 +1,4 @@
+import logging
 import os
 
 import yaml
@@ -16,9 +17,10 @@ ALLOWED_GUILDS = {int(x.strip()) for x in os.getenv("ALLOWED_GUILDS", "").split(
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB = os.getenv("MONGO_DB", "redbot")
 
+if os.path.exists("messages.yaml"):
+    with open("messages.yaml", "r", encoding="utf-8") as f:
+        MESSAGES = yaml.safe_load(f)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MESSAGES_FILE = os.path.join(BASE_DIR, "messages.yaml")
-
-with open(MESSAGES_FILE, "r", encoding="utf-8") as f:
-    MESSAGES = yaml.safe_load(f)
+else:
+    with open("messages_static.yaml", "r", encoding="utf-8") as f:
+        MESSAGES = yaml.safe_load(f)
