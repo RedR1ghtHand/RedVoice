@@ -59,6 +59,10 @@ class SessionManager:
             async for s in cursor
         ]
 
+    async def delete_session(self, channel_id: int) -> bool:
+        result = await self.collection.delete_one({"channel_id": channel_id, "is_ended": False})
+        return result.deleted_count > 0
+
     async def update_channel_name(self, channel_id: int, new_name: str) -> bool:
         result = await self.collection.update_one(
             {"channel_id": channel_id, "is_ended": False},

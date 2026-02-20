@@ -234,7 +234,7 @@ async def clean_up_active_sessions(interaction: discord.Interaction):
         await interaction.response.send_message(f"Closed **{closed}** empty temporary channel(s) and saved their sessions.")
 
 
-@tree.command(name="clean-up-db-sessions", description="End DB sessions that still have is_ended=False but their voice channel no longer exists")
+@tree.command(name="clean-up-db-sessions", description="Remove from DB sessions that have is_ended=False but their voice channel no longer exists")
 @app_commands.checks.has_permissions(administrator=True)
 async def clean_up_db_sessions(interaction: discord.Interaction):
     global temporary_channels
@@ -245,15 +245,15 @@ async def clean_up_db_sessions(interaction: discord.Interaction):
     ]
     cleaned = 0
     for session in broken:
-        await session_manager.update_and_end_session(session.channel_id)
+        await session_manager.delete_session(session.channel_id)
         temporary_channels.discard(session.channel_id)
-        logging.info(f"Broken session '{session.channel_name}' (channel_id={session.channel_id}) marked ended.")
+        logging.info(f"Broken session '{session.channel_name}' (channel_id={session.channel_id}) removed from DB.")
         cleaned += 1
 
     if cleaned == 0:
         await interaction.response.send_message("No broken sessions found.")
     else:
-        await interaction.response.send_message(f"Cleaned up **{cleaned}** broken session(s) (channel no longer exists, entry saved and marked ended).")
+        await interaction.response.send_message(f"Removed **{cleaned}** broken session(s) from the database (channel no longer exists).")
 
 
 def run_bot():
